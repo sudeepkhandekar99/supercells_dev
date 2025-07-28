@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import {
@@ -32,12 +33,16 @@ export default function MergeResultsPage() {
   const [responseData, setResponseData] = useState<MergeResponse | null>(null)
   const [filteredData, setFilteredData] = useState<MergeResponse | null>(null)
 
-  const [onesiteOptions, setOnesiteOptions] = useState<string[]>([])
-  const [apricotOptions, setApricotOptions] = useState<string[]>([])
+  const [activeTab, setActiveTab] = useState("matched")
+  const [apricotFilter, setApricotFilter] = useState("")
+  const [onesiteFilter, setOnesiteFilter] = useState("")
 
-  const [onesiteBuildingFilter, setOnesiteBuildingFilter] = useState<string | null>(null)
-  const [apricotBuildingFilter, setApricotBuildingFilter] = useState<string | null>(null)
-  const [filterLogic, setFilterLogic] = useState<"OR" | "AND">("OR")
+  const [filterOptions, setFilterOptions] = useState({
+    matched: { apricot: [], onesite: [] },
+    unmatched: { apricot: [], onesite: [] },
+    name_matched: { apricot: [], onesite: [] },
+    dob_matched: { apricot: [], onesite: [] },
+  })
 
   useEffect(() => {
     const apricotData = JSON.parse(localStorage.getItem("apricotData") || "[]")
@@ -60,10 +65,28 @@ export default function MergeResultsPage() {
       body: JSON.stringify(payload),
     })
       .then((res) => res.json())
-      .then((data: MergeResponse) => {
-        setResponseData(data)
-        setFilteredData(data)
-        extractOptions(data)
+      .then((data) => {
+        setResponseData(data as MergeResponse)
+        setFilteredData(data as MergeResponse)
+
+        setFilterOptions({
+          matched: {
+            apricot: getUnique(data.matched, "Building (Apricot)"),
+            onesite: getUnique(data.matched, "Building (Onesite)"),
+          },
+          unmatched: {
+            apricot: getUnique(data.unmatched, "Property"),
+            onesite: getUnique(data.unmatched, "Building"),
+          },
+          name_matched: {
+            apricot: getUnique(data.name_matched, "Property"),
+            onesite: getUnique(data.name_matched, "Building"),
+          },
+          dob_matched: {
+            apricot: getUnique(data.dob_matched, "Property"),
+            onesite: getUnique(data.dob_matched, "Building"),
+          },
+        })
       })
       .catch((err) => {
         console.error(err)
@@ -72,36 +95,28 @@ export default function MergeResultsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const extractOptions = (data: MergeResponse) => {
-    const allRows = [
-      ...data.matched,
-      ...data.unmatched,
-      ...data.name_matched,
-      ...data.dob_matched,
-    ]
+  const getUnique = (data: any[], key: string) => {
+    return Array.from(new Set(data.map((row) => row[key]).filter(Boolean)))
+  }
 
-    const apricotSet = new Set<string>()
-    const onesiteSet = new Set<string>()
-
-    for (const row of allRows) {
-      if (row["Building (Apricot)"]) apricotSet.add(row["Building (Apricot)"])
-      if (row["Building (Onesite)"]) onesiteSet.add(row["Building (Onesite)"])
+  const getFilterKeys = () => {
+    switch (activeTab) {
+      case "matched":
+        return ["Building (Apricot)", "Building (Onesite)"]
+      default:
+        return ["Property", "Building"]
     }
-
-    setApricotOptions(Array.from(apricotSet))
-    setOnesiteOptions(Array.from(onesiteSet))
   }
 
   const applyFilters = () => {
     if (!responseData) return
 
-    const filterFunc = (row: any) => {
-      const matchOnesite = !onesiteBuildingFilter || row["Building (Onesite)"] === onesiteBuildingFilter
-      const matchApricot = !apricotBuildingFilter || row["Building (Apricot)"] === apricotBuildingFilter
+    const [apricotCol, onesiteCol] = getFilterKeys()
 
-      return filterLogic === "AND"
-        ? matchOnesite && matchApricot
-        : matchOnesite || matchApricot
+    const filterFunc = (row: any) => {
+      const matchApricot = !apricotFilter || row[apricotCol] === apricotFilter
+      const matchOnesite = !onesiteFilter || row[onesiteCol] === onesiteFilter
+      return matchApricot || matchOnesite
     }
 
     setFilteredData({
@@ -115,9 +130,8 @@ export default function MergeResultsPage() {
   const resetFilters = () => {
     if (responseData) {
       setFilteredData(responseData)
-      setOnesiteBuildingFilter(null)
-      setApricotBuildingFilter(null)
-      setFilterLogic("OR")
+      setApricotFilter("")
+      setOnesiteFilter("")
     }
   }
 
@@ -165,54 +179,40 @@ export default function MergeResultsPage() {
           </SheetTrigger>
           <SheetContent>
             <SheetHeader>
-              <SheetTitle>Filter by Property</SheetTitle>
-              <SheetDescription>Select building filters below.</SheetDescription>
+              <SheetTitle>Filter</SheetTitle>
+              <SheetDescription>Use dropdown filters for selected tab.</SheetDescription>
             </SheetHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2 px-2">
-                <Label>Building (Onesite)</Label>
-                <Select value={onesiteBuildingFilter ?? ""} onValueChange={setOnesiteBuildingFilter}>
+                <Label>Apricot Filter</Label>
+                <Select value={apricotFilter} onValueChange={setApricotFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Onesite Building" />
+                    <SelectValue placeholder="Select apricot property" />
                   </SelectTrigger>
                   <SelectContent>
-                    {onesiteOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    {filterOptions[activeTab].apricot.map((val) => (
+                      <SelectItem key={val} value={val}>{val}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid gap-2 px-2">
-                <Label>Building (Apricot)</Label>
-                <Select value={apricotBuildingFilter ?? ""} onValueChange={setApricotBuildingFilter}>
+                <Label>Onesite Filter</Label>
+                <Select value={onesiteFilter} onValueChange={setOnesiteFilter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Apricot Building" />
+                    <SelectValue placeholder="Select onesite property" />
                   </SelectTrigger>
                   <SelectContent>
-                    {apricotOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    {filterOptions[activeTab].onesite.map((val) => (
+                      <SelectItem key={val} value={val}>{val}</SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2 px-2">
-                <Label>Filter Logic</Label>
-                <Select value={filterLogic} onValueChange={(val) => setFilterLogic(val as "OR" | "AND") }>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="OR">OR</SelectItem>
-                    <SelectItem value="AND">AND</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <SheetFooter>
               <Button onClick={applyFilters}>Apply</Button>
-              <Button variant="outline" onClick={resetFilters}>
-                Reset
-              </Button>
+              <Button variant="outline" onClick={resetFilters}>Reset</Button>
               <SheetClose asChild>
                 <Button variant="ghost">Close</Button>
               </SheetClose>
@@ -221,7 +221,7 @@ export default function MergeResultsPage() {
         </Sheet>
       </div>
 
-      <Tabs defaultValue="matched">
+      <Tabs defaultValue="matched" onValueChange={(val) => setActiveTab(val)}>
         <TabsList className="mb-4">
           <TabsTrigger value="matched">All Matched</TabsTrigger>
           <TabsTrigger value="unmatched">Unmatched</TabsTrigger>
