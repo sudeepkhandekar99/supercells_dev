@@ -23,20 +23,20 @@ def clean_onesite_data(file: UploadFile) -> pd.DataFrame:
         prop_name = cell_value.split("Jubilee Housing, Inc. - ")[1].strip()
     prop_name = name_mapping.get(prop_name, prop_name)
 
-    # Clean and format dataframe
+    # Drop top rows and empty
     df = df.drop(df.index[:8])
     df.reset_index(drop=True, inplace=True)
     df.dropna(subset=[df.columns[0]], inplace=True)
     df["Property"] = prop_name
 
     df = df.rename(columns={
-        "Unnamed: 0":"Unit", 
+        "Unnamed: 0": "Unit", 
         "Unnamed: 2": "Name", 
-        "Unnamed: 4":"DOB", 
-        "Unnamed: 5":"Gender", 
-        "Unnamed: 6":"Marital Status", 
-        "Unnamed: 7":"Ethnic Origin", 
-        "Unnamed: 9":"Household Status"
+        "Unnamed: 4": "DOB", 
+        "Unnamed: 5": "Gender", 
+        "Unnamed: 6": "Marital Status", 
+        "Unnamed: 7": "Ethnic Origin", 
+        "Unnamed: 9": "Household Status"
     })
 
     columns_to_keep = [
@@ -45,6 +45,7 @@ def clean_onesite_data(file: UploadFile) -> pd.DataFrame:
     ]
     df = df[columns_to_keep]
 
+    # Cell cleanup
     df = df.map(lambda cell: re.sub(r'\\.*|\n.*','',str(cell)).strip() if isinstance(cell, str) else cell)
 
     df.drop_duplicates(inplace=True)
