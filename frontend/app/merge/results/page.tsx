@@ -143,7 +143,9 @@ export default function MergeResultsPage() {
     if (!responseData) return
     const types = ["matched", "unmatched", "name_matched", "dob_matched"] as const
     types.forEach((type) => {
-      const csv = Papa.unparse(responseData[type].map(({ "Matched in both": _, "Unmatched Apricot": __, "Unmatched Onesite": ___, ...rest }) => rest))
+      const csv = Papa.unparse(
+        responseData[type].map(({ "Matched in both": _, "Unmatched Apricot": __, "Unmatched Onesite": ___, ...rest }) => rest)
+      )
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
       saveAs(blob, `${type}.csv`)
     })
@@ -190,11 +192,22 @@ export default function MergeResultsPage() {
           Merge Results
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger><Info className="w-4 h-4 text-muted-foreground" /></TooltipTrigger>
-              <TooltipContent>
-                <p><span className="font-medium">Green</span>: Matched in both</p>
-                <p><span className="font-medium">Orange</span>: Unmatched Apricot</p>
-                <p><span className="font-medium">Pink</span>: Unmatched Onesite</p>
+              <TooltipTrigger>
+                <Info className="w-4 h-4 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-sm bg-[#ECFAE5] border border-gray-300" />
+                  <span className="text-sm">Matched in both</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-sm bg-[#FFE8CD] border border-gray-300" />
+                  <span className="text-sm">Unmatched Apricot</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-sm bg-[#EECAD5] border border-gray-300" />
+                  <span className="text-sm">Unmatched Onesite</span>
+                </div>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -218,7 +231,7 @@ export default function MergeResultsPage() {
                       <SelectValue placeholder="Select apricot property" />
                     </SelectTrigger>
                     <SelectContent>
-                      {filterOptions[activeTab].apricot.map((val) => (
+                      {filterOptions[activeTab as keyof typeof filterOptions].apricot.map((val) => (
                         <SelectItem key={val} value={val}>{val}</SelectItem>
                       ))}
                     </SelectContent>
@@ -231,7 +244,7 @@ export default function MergeResultsPage() {
                       <SelectValue placeholder="Select onesite property" />
                     </SelectTrigger>
                     <SelectContent>
-                      {filterOptions[activeTab].onesite.map((val) => (
+                      {filterOptions[activeTab as keyof typeof filterOptions].onesite.map((val) => (
                         <SelectItem key={val} value={val}>{val}</SelectItem>
                       ))}
                     </SelectContent>
