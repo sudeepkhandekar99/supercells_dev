@@ -17,6 +17,10 @@ import {
 } from "@/components/ui/sheet"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Info } from "lucide-react"
+import { saveAs } from "file-saver"
+import Papa from "papaparse"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
@@ -38,10 +42,10 @@ export default function MergeResultsPage() {
   const [onesiteFilter, setOnesiteFilter] = useState("")
 
   const [filterOptions, setFilterOptions] = useState({
-    matched: { apricot: [], onesite: [] },
-    unmatched: { apricot: [], onesite: [] },
-    name_matched: { apricot: [], onesite: [] },
-    dob_matched: { apricot: [], onesite: [] },
+    matched: { apricot: [] as string[], onesite: [] as string[] },
+    unmatched: { apricot: [] as string[], onesite: [] as string[] },
+    name_matched: { apricot: [] as string[], onesite: [] as string[] },
+    dob_matched: { apricot: [] as string[], onesite: [] as string[] },
   })
 
   useEffect(() => {
@@ -135,11 +139,19 @@ export default function MergeResultsPage() {
     }
   }
 
+  const exportAll = () => {
+    if (!responseData) return
+    const types = ["matched", "unmatched", "name_matched", "dob_matched"] as const
+    types.forEach((type) => {
+      const csv = Papa.unparse(responseData[type].map(({ "Matched in both": _, "Unmatched Apricot": __, "Unmatched Onesite": ___, ...rest }) => rest))
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" })
+      saveAs(blob, `${type}.csv`)
+    })
+  }
+
   const renderTable = (data: any[]) => {
     if (!data || data.length === 0) return <p className="text-muted-foreground">No records found.</p>
-
-    const columns = Object.keys(data[0])
-
+    const columns = Object.keys(data[0]).filter(col => !["Matched in both", "Unmatched Apricot", "Unmatched Onesite"].includes(col))
     return (
       <div className="overflow-auto rounded-md border">
         <Table>
@@ -151,13 +163,16 @@ export default function MergeResultsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((row, idx) => (
-              <TableRow key={idx}>
-                {columns.map((col) => (
-                  <TableCell key={col}>{row[col]}</TableCell>
-                ))}
-              </TableRow>
-            ))}
+            {data.map((row, idx) => {
+              const bg = row["Matched in both"] ? "bg-[#ECFAE5]" : row["Unmatched Apricot"] ? "bg-[#FFE8CD]" : "bg-[#EECAD5]"
+              return (
+                <TableRow key={idx} className={bg}>
+                  {columns.map((col) => (
+                    <TableCell key={col}>{row[col]}</TableCell>
+                  ))}
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>
@@ -171,54 +186,68 @@ export default function MergeResultsPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-semibold">Merge Results</h1>
-
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline">Filter</Button>
-          </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Filter</SheetTitle>
-              <SheetDescription>Use dropdown filters for selected tab.</SheetDescription>
-            </SheetHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2 px-2">
-                <Label>Apricot Filter</Label>
-                <Select value={apricotFilter} onValueChange={setApricotFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select apricot property" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filterOptions[activeTab].apricot.map((val) => (
-                      <SelectItem key={val} value={val}>{val}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        <h1 className="text-2xl font-semibold flex items-center gap-2">
+          Merge Results
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger><Info className="w-4 h-4 text-muted-foreground" /></TooltipTrigger>
+              <TooltipContent>
+                <p><span className="font-medium">Green</span>: Matched in both</p>
+                <p><span className="font-medium">Orange</span>: Unmatched Apricot</p>
+                <p><span className="font-medium">Pink</span>: Unmatched Onesite</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </h1>
+        <div className="flex gap-2">
+          <Button onClick={exportAll}>Export CSVs</Button>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline">Filter</Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Filter</SheetTitle>
+                <SheetDescription>Use dropdown filters for selected tab.</SheetDescription>
+              </SheetHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2 px-2">
+                  <Label>Apricot Filter</Label>
+                  <Select value={apricotFilter} onValueChange={setApricotFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select apricot property" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filterOptions[activeTab].apricot.map((val) => (
+                        <SelectItem key={val} value={val}>{val}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2 px-2">
+                  <Label>Onesite Filter</Label>
+                  <Select value={onesiteFilter} onValueChange={setOnesiteFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select onesite property" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filterOptions[activeTab].onesite.map((val) => (
+                        <SelectItem key={val} value={val}>{val}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="grid gap-2 px-2">
-                <Label>Onesite Filter</Label>
-                <Select value={onesiteFilter} onValueChange={setOnesiteFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select onesite property" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filterOptions[activeTab].onesite.map((val) => (
-                      <SelectItem key={val} value={val}>{val}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <SheetFooter>
-              <Button onClick={applyFilters}>Apply</Button>
-              <Button variant="outline" onClick={resetFilters}>Reset</Button>
-              <SheetClose asChild>
-                <Button variant="ghost">Close</Button>
-              </SheetClose>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
+              <SheetFooter>
+                <Button onClick={applyFilters}>Apply</Button>
+                <Button variant="outline" onClick={resetFilters}>Reset</Button>
+                <SheetClose asChild>
+                  <Button variant="ghost">Close</Button>
+                </SheetClose>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
       <Tabs defaultValue="matched" onValueChange={(val) => setActiveTab(val)}>

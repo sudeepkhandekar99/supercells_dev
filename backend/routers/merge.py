@@ -1,8 +1,12 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel
 from typing import List, Dict, Any
 import pandas as pd
 from services.merger import process_dynamic_merging
+from fastapi.responses import StreamingResponse
+from io import BytesIO
+import zipfile
+import datetime
 
 router = APIRouter()
 
@@ -38,3 +42,48 @@ async def merge_records(request: MergeRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+# Export CSV API
+
+class ExportRequest(BaseModel):
+    matched: List[Dict[str, Any]]
+    unmatched: List[Dict[str, Any]]
+    name_matched: List[Dict[str, Any]]
+    dob_matched: List[Dict[str, Any]]
+
+@router.post("/export-csv/")
+async def export_csv_files(data: ExportRequest):
+    try:
+        # Convert lists of dicts to DataFrames
+        matched_df = pd.DataFrame(data.matched)
+        unmatched_df = pd.DataFrame(data.unmatched)
+        name_df = pd.DataFrame(data.name_matched)
+        dob_df = pd.DataFrame(data.dob_matched)
+
+        # Create a BytesIO zip stream
+        zip_stream = BytesIO()
+        with zipfile.ZipFile(zip_stream, "w", zipfile.ZIP_DEFLATED) as zipf:
+            files = {
+                "matched.csv": matched_df,
+                "unmatched.csv": unmatched_df,
+                "name_matched.csv": name_df,
+                "dob_matched.csv": dob_df
+            }
+
+            for filename, df in files.items():
+                buffer = BytesIO()
+                df.to_csv(buffer, index=False)
+                buffer.seek(0)
+                zipf.writestr(filename, buffer.read())
+
+        zip_stream.seek(0)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        return StreamingResponse(
+            zip_stream,
+            media_type="application/x-zip-compressed",
+            headers={"Content-Disposition": f"attachment; filename=merged_data_{timestamp}.zip"}
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to export CSVs: {str(e)}")
