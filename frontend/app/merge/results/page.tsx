@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import {
   Sheet,
   SheetClose,
@@ -197,15 +198,15 @@ export default function MergeResultsPage() {
               </TooltipTrigger>
               <TooltipContent className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-sm bg-[#ECFAE5] border border-gray-300" />
+                  <span className="w-4 h-4 rounded-sm bg-[#ECFAE5] border border-gray-300" />
                   <span className="text-sm">Matched in both</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-sm bg-[#FFE8CD] border border-gray-300" />
+                  <span className="w-4 h-4 rounded-sm bg-[#FFE8CD] border border-gray-300" />
                   <span className="text-sm">Unmatched Apricot</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-sm bg-[#EECAD5] border border-gray-300" />
+                  <span className="w-4 h-4 rounded-sm bg-[#EECAD5] border border-gray-300" />
                   <span className="text-sm">Unmatched Onesite</span>
                 </div>
               </TooltipContent>
@@ -213,10 +214,14 @@ export default function MergeResultsPage() {
           </TooltipProvider>
         </h1>
         <div className="flex gap-2">
-          <Button onClick={exportAll}>Export CSVs</Button>
+          {/* Home Button */}
+          <Link href="/">
+            <Button variant="outline" className="text-sm">Home</Button>
+          </Link>
+          <Button variant="outline" onClick={exportAll}>Export CSVs</Button>
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline">Filter</Button>
+              <Button>Filter</Button>
             </SheetTrigger>
             <SheetContent>
               <SheetHeader>
@@ -265,12 +270,11 @@ export default function MergeResultsPage() {
 
       <Tabs defaultValue="matched" onValueChange={(val) => setActiveTab(val)}>
         <TabsList className="mb-4">
-          <TabsTrigger value="matched">All Matched</TabsTrigger>
+          <TabsTrigger value="matched">All</TabsTrigger>
           <TabsTrigger value="unmatched">Unmatched</TabsTrigger>
           <TabsTrigger value="name_matched">Name Matched</TabsTrigger>
           <TabsTrigger value="dob_matched">DOB Matched</TabsTrigger>
         </TabsList>
-
         <TabsContent value="matched">{renderTable(filteredData.matched)}</TabsContent>
         <TabsContent value="unmatched">{renderTable(filteredData.unmatched)}</TabsContent>
         <TabsContent value="name_matched">{renderTable(filteredData.name_matched)}</TabsContent>

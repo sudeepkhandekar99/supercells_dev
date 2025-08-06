@@ -150,6 +150,31 @@ def process_dynamic_merging(apricot_data, onesite_data, merge_columns):
     df_global = df_global[[col for col in rename_map if col in df_global.columns]]
     df_global.rename(columns=rename_map, inplace=True)
 
+    # Sort logic with kind="stable" to preserve prior sort order when NaNs present
+    df_global = df_global.sort_values(
+        by=["Building (Onesite)", "Building (Apricot)", "Unit (Onesite)"],
+        na_position="last",
+        kind="stable"
+    )
+
+    df_dob_matched = df_dob_matched.sort_values(
+        by=["Property", "Building", "Unit"],
+        na_position="last",
+        kind="stable"
+    )
+
+    df_unmatched = df_unmatched.sort_values(
+        by=["Property", "Building", "Unit"],
+        na_position="last",
+        kind="stable"
+    )
+
+    df_name_matched = df_name_matched.sort_values(
+        by=["Property", "Building", "Unit"],
+        na_position="last",
+        kind="stable"
+    )
+
     # Final clean-up
     df_name_matched = df_name_matched.where(pd.notnull(df_name_matched), None)
     df_dob_matched = df_dob_matched.where(pd.notnull(df_dob_matched), None)
