@@ -138,6 +138,7 @@ def process_dynamic_merging(apricot_data, onesite_data, merge_columns):
         "Property": "Building (Onesite)",
         "Building": "Building (Apricot)",
         "Unit": "Unit (Onesite)",
+        "Unit Number": "Unit (Apricot)",
         "DOB": "Date of Birth (Onesite)",
         "Date of Birth": "Date of Birth (Apricot)",
         "Record ID": "Record ID (Apricot)",
